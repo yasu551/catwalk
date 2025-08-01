@@ -12,7 +12,7 @@
 
 ## 顔認識・特殊効果
 
-- **MediaPipe Face Mesh（JavaScript版）**
+- **MediaPipe Face Landmarker（JavaScript版）**
 - **顔エフェクト適用ライブラリ**: TensorFlow.js または OpenCV.js
 
 ## 歩行パターン分析・機械学習モデル

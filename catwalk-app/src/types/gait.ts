@@ -39,10 +39,18 @@ export interface FaceLandmark {
   z: number
 }
 
-// Face Mesh検出結果
+// Face Mesh検出結果 (Legacy - deprecated)
 export interface FaceMeshResults {
   multiFaceLandmarks?: FaceLandmark[][]
   image: HTMLVideoElement | HTMLImageElement | HTMLCanvasElement
+}
+
+// Face Landmarker検出結果 (New API)
+export interface FaceLandmarkerResults {
+  faceLandmarks: FaceLandmark[][]
+  faceBlendshapes?: Array<Array<{categoryName: string, score: number}>>
+  facialTransformationMatrixes?: Array<Array<number>>
+  image?: HTMLVideoElement | HTMLImageElement | HTMLCanvasElement
 }
 
 // 顔領域情報
