@@ -45,6 +45,14 @@ export class TrajectoryTracker {
   }
 
   /**
+   * 最新のN個の重心データを取得
+   */
+  getRecentCenterOfGravity(count: number): CenterOfGravity[] {
+    const startIndex = Math.max(0, this.cogHistory.length - count)
+    return this.cogHistory.slice(startIndex)
+  }
+
+  /**
    * 軌跡履歴をクリア
    */
   clearHistory(): void {

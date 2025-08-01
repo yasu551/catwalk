@@ -32,12 +32,15 @@
   flex: 1;
   display: grid;
   grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto auto auto;
   gap: 2rem;
   align-items: start;
 }
 
 .camera-section,
-.pose-section {
+.pose-section,
+.trajectory-section,
+.classification-section {
   background: white;
   border-radius: 8px;
   padding: 1.5rem;
@@ -46,13 +49,25 @@
 }
 
 .camera-section h2,
-.pose-section h2 {
+.pose-section h2,
+.trajectory-section h2,
+.classification-section h2 {
   margin: 0 0 1rem 0;
   color: #374151;
   font-size: 1.5rem;
   font-weight: 600;
   border-bottom: 2px solid #f3f4f6;
   padding-bottom: 0.5rem;
+}
+
+/* Trajectory section spans both columns */
+.trajectory-section {
+  grid-column: 1 / -1;
+}
+
+/* Classification section spans both columns */
+.classification-section {
+  grid-column: 1 / -1;
 }
 
 .camera-container {
@@ -144,7 +159,47 @@
   }
 
   .camera-section,
-  .pose-section {
+  .pose-section,
+  .trajectory-section,
+  .classification-section {
     padding: 1rem;
   }
+}
+
+/* Classification loading styles */
+.classification-loading {
+  text-align: center;
+  padding: 2rem;
+  color: #6b7280;
+}
+
+.classification-loading p {
+  margin: 0 0 1rem 0;
+  font-size: 1.1rem;
+}
+
+.loading-indicator {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #f3f4f6;
+  border-top: 3px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Gait classification styles */
+.gait-classification-main {
+  max-width: 800px;
+  margin: 0 auto;
 }
