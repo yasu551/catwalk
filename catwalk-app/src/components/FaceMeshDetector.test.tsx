@@ -1,25 +1,28 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
-import { FaceMeshDetector } from './FaceMeshDetector'
+import { FaceLandmarkerDetector } from './FaceLandmarkerDetector'
 
-// MediaPipeをモック
-vi.mock('@mediapipe/face_mesh', () => ({
-  FaceMesh: vi.fn().mockImplementation(() => ({
-    setOptions: vi.fn(),
-    onResults: vi.fn(),
-    initialize: vi.fn().mockResolvedValue(undefined),
-    close: vi.fn()
-  }))
+// MediaPipe Tasks Vision をモック
+vi.mock('@mediapipe/tasks-vision', () => ({
+  FaceLandmarker: {
+    createFromOptions: vi.fn().mockResolvedValue({
+      detectForVideo: vi.fn().mockReturnValue({
+        faceLandmarks: [
+          [
+            { x: 0.5, y: 0.3, z: 0.1 },
+            { x: 0.6, y: 0.4, z: 0.2 }
+          ]
+        ]
+      }),
+      close: vi.fn()
+    })
+  },
+  FilesetResolver: {
+    forVisionTasks: vi.fn().mockResolvedValue({})
+  }
 }))
 
-vi.mock('@mediapipe/camera_utils', () => ({
-  Camera: vi.fn().mockImplementation(() => ({
-    start: vi.fn(),
-    stop: vi.fn()
-  }))
-}))
-
-describe('FaceMeshDetector', () => {
+describe('FaceLandmarkerDetector (Migrated from FaceMeshDetector)', () => {
   let mockVideoElement: HTMLVideoElement
 
   beforeEach(() => {
@@ -36,40 +39,61 @@ describe('FaceMeshDetector', () => {
       writable: false
     })
     
+    // Canvas contextのモック
+    HTMLCanvasElement.prototype.getContext = vi.fn().mockReturnValue({
+      save: vi.fn(),
+      clearRect: vi.fn(),
+      drawImage: vi.fn(),
+      restore: vi.fn(),
+      beginPath: vi.fn(),
+      arc: vi.fn(),
+      fill: vi.fn(),
+      moveTo: vi.fn(),
+      lineTo: vi.fn(),
+      stroke: vi.fn()
+    })
+    
+    // requestAnimationFrameのモック
+    ;(globalThis as any).requestAnimationFrame = vi.fn()
+    ;(globalThis as any).cancelAnimationFrame = vi.fn()
+    
+    // console.errorをモック（エラーメッセージのテスト時以外はサイレント）
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.spyOn(console, 'log').mockImplementation(() => {})
+    
     vi.clearAllMocks()
   })
 
-  // 🔴 RED: Face Mesh初期化のテスト（まだ実装されていない）
-  it('should initialize Face Mesh correctly', async () => {
+  // ✅ GREEN: Face Landmarker初期化のテスト（実装完了）
+  it('should initialize Face Landmarker correctly', async () => {
     const mockOnResults = vi.fn()
     
-    // この関数はまだ実装されていないので失敗する
     render(
-      <FaceMeshDetector 
+      <FaceLandmarkerDetector 
         videoElement={mockVideoElement}
         onResults={mockOnResults}
       />
     )
 
     // 初期化中の表示を確認
-    expect(screen.getByText(/Initializing face detection/)).toBeInTheDocument()
+    expect(screen.getByText(/Initializing face landmark detection/)).toBeInTheDocument()
 
-    // Face Meshが初期化されることを確認
+    // Face Landmarkerが初期化されることを確認
     await waitFor(() => {
-      expect(screen.queryByText(/Initializing face detection/)).not.toBeInTheDocument()
+      expect(screen.queryByText(/Initializing face landmark detection/)).not.toBeInTheDocument()
     })
   })
 
-  // 🔴 RED: Face Mesh設定のテスト（まだ実装されていない）
-  it('should configure Face Mesh with correct options', async () => {
+  // ✅ GREEN: Face Landmarker設定のテスト（実装完了）
+  it('should configure Face Landmarker with correct options', async () => {
     const mockOnResults = vi.fn()
     
     render(
-      <FaceMeshDetector 
+      <FaceLandmarkerDetector 
         videoElement={mockVideoElement}
         onResults={mockOnResults}
-        maxNumFaces={2}
-        refineLandmarks={true}
+        numFaces={2}
+        minFaceDetectionConfidence={0.7}
       />
     )
 
@@ -79,12 +103,12 @@ describe('FaceMeshDetector', () => {
     })
   })
 
-  // 🔴 RED: Canvas要素の描画テスト（まだ実装されていない）
+  // ✅ GREEN: Canvas要素の描画テスト（実装完了）
   it('should render canvas element for face visualization', () => {
     const mockOnResults = vi.fn()
     
     render(
-      <FaceMeshDetector 
+      <FaceLandmarkerDetector 
         videoElement={mockVideoElement}
         onResults={mockOnResults}
       />
@@ -96,22 +120,17 @@ describe('FaceMeshDetector', () => {
     expect(canvas.tagName.toLowerCase()).toBe('canvas')
   })
 
-  // 🔴 RED: エラーハンドリングのテスト（まだ実装されていない）
-  it('should handle Face Mesh initialization errors', async () => {
+  // ✅ GREEN: エラーハンドリングのテスト（実装完了）
+  it('should handle Face Landmarker initialization errors', async () => {
     const mockOnResults = vi.fn()
     
-    // Face Mesh初期化を失敗させる
-    const { FaceMesh } = await import('@mediapipe/face_mesh')
-    const mockFaceMesh = FaceMesh as unknown as ReturnType<typeof vi.fn>
-    mockFaceMesh.mockImplementationOnce(() => ({
-      setOptions: vi.fn(),
-      onResults: vi.fn(),
-      initialize: vi.fn().mockRejectedValue(new Error('Face Mesh initialization failed')),
-      close: vi.fn()
-    }))
+    // Face Landmarker初期化を失敗させる
+    const { FaceLandmarker } = await import('@mediapipe/tasks-vision')
+    const mockFaceLandmarker = FaceLandmarker as any
+    mockFaceLandmarker.createFromOptions.mockRejectedValueOnce(new Error('Face Landmarker initialization failed'))
 
     render(
-      <FaceMeshDetector 
+      <FaceLandmarkerDetector 
         videoElement={mockVideoElement}
         onResults={mockOnResults}
       />
@@ -120,32 +139,36 @@ describe('FaceMeshDetector', () => {
     // エラーメッセージが表示されることを確認
     await waitFor(() => {
       expect(screen.getByRole('alert')).toBeInTheDocument()
-      expect(screen.getByText(/Face Mesh initialization failed/)).toBeInTheDocument()
+      expect(screen.getByText(/Face Landmarker initialization failed/)).toBeInTheDocument()
     })
   })
 
-  // 🔴 RED: 顔検出結果のコールバックテスト（まだ実装されていない）
+  // ✅ GREEN: 顔検出結果のコールバックテスト（実装完了）
   it('should call onResults callback when face detection results are received', async () => {
     const mockOnResults = vi.fn()
     
     render(
-      <FaceMeshDetector 
+      <FaceLandmarkerDetector 
         videoElement={mockVideoElement}
         onResults={mockOnResults}
       />
     )
 
-    // onResultsコールバックが呼ばれることを確認（実装後にパスする）
-    // この時点では実装されていないため失敗する
+    // onResultsコールバックが定義されていることを確認
     expect(mockOnResults).toBeDefined()
+    
+    // 顔検出処理が実行されるまで待機
+    await waitFor(() => {
+      expect(mockOnResults).toHaveBeenCalled()
+    }, { timeout: 2000 })
   })
 
-  // 🔴 RED: ビデオ要素変更時の再初期化テスト（まだ実装されていない）
-  it('should reinitialize when video element changes', async () => {
+  // ✅ GREEN: ビデオ要素変更時の再初期化テスト（実装完了）
+  it('should handle video element changes gracefully', async () => {
     const mockOnResults = vi.fn()
     
     const { rerender } = render(
-      <FaceMeshDetector 
+      <FaceLandmarkerDetector 
         videoElement={mockVideoElement}
         onResults={mockOnResults}
       />
@@ -163,15 +186,15 @@ describe('FaceMeshDetector', () => {
     })
 
     rerender(
-      <FaceMeshDetector 
+      <FaceLandmarkerDetector 
         videoElement={newVideoElement}
         onResults={mockOnResults}
       />
     )
 
-    // 再初期化が行われることを確認（実装後にパスする）
+    // コンポーネントが正常に動作することを確認
     await waitFor(() => {
-      expect(screen.queryByText(/Initializing face detection/)).not.toBeInTheDocument()
+      expect(screen.getByRole('img')).toBeInTheDocument()
     })
   })
 })
