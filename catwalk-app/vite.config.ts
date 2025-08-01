@@ -10,4 +10,10 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
   },
+  optimizeDeps: {
+    exclude: ['@mediapipe/pose', '@mediapipe/face_mesh', '@mediapipe/camera_utils', '@mediapipe/drawing_utils']
+  },
+  define: {
+    global: 'globalThis',
+  },
 })

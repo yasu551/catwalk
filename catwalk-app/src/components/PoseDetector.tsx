@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { Pose, type Results, POSE_CONNECTIONS } from '@mediapipe/pose'
-import { Camera as MediaPipeCamera } from '@mediapipe/camera_utils'
+import type { Pose, Results } from '@mediapipe/pose'
+import type { Camera as MediaPipeCamera } from '@mediapipe/camera_utils'
 import { drawConnectors, drawLandmarks } from '@mediapipe/drawing_utils'
 import { calculateCenterOfGravity } from '../utils/centerOfGravity'
 import { globalTrajectoryTracker } from '../utils/trajectoryTracker'
 import { type PoseLandmark } from '../types/gait'
+import { POSE_CONNECTIONS } from '../constants/poseConnections'
 
 interface PoseDetectorProps {
   videoElement?: HTMLVideoElement
@@ -13,6 +14,7 @@ interface PoseDetectorProps {
 
 export function PoseDetector({ videoElement, onResults }: PoseDetectorProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const initialized = useRef(false)
   const [pose, setPose] = useState<Pose | null>(null)
   const [camera, setCamera] = useState<MediaPipeCamera | null>(null)
   const [isInitialized, setIsInitialized] = useState(false)
@@ -20,14 +22,37 @@ export function PoseDetector({ videoElement, onResults }: PoseDetectorProps) {
 
   // MediaPipe Poseを初期化
   useEffect(() => {
+    if (initialized.current) {
+      console.log('PoseDetector: Already initialized, skipping')
+      return
+    }
+
+    console.log('PoseDetector: Starting initialization')
+    initialized.current = true
+
     const initializePose = async () => {
       try {
-        const poseInstance = new Pose({
-          locateFile: file => {
-            return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
-          },
-        })
+        console.log('PoseDetector: Creating Pose instance')
+        
+        // Poseクラスを動的インポート
+        const { Pose } = await import('@mediapipe/pose')
+        
+        // タイムアウト付きで初期化
+        const poseInstance = await Promise.race([
+          new Promise<Pose>((resolve) => {
+            const pose = new Pose({
+              locateFile: file => {
+                return `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/${file}`
+              },
+            })
+            resolve(pose)
+          }),
+          new Promise<never>((_, reject) => {
+            setTimeout(() => reject(new Error('Pose initialization timeout')), 10000)
+          })
+        ])
 
+        console.log('PoseDetector: Setting options')
         poseInstance.setOptions({
           modelComplexity: 1,
           smoothLandmarks: true,
@@ -97,10 +122,15 @@ export function PoseDetector({ videoElement, onResults }: PoseDetectorProps) {
           onResults?.(results)
         })
 
+        console.log('PoseDetector: Initializing pose instance')
         await poseInstance.initialize()
+        
+        console.log('PoseDetector: Initialization completed successfully')
         setPose(poseInstance)
         setIsInitialized(true)
       } catch (err) {
+        console.error('PoseDetector: Initialization failed:', err)
+        initialized.current = false
         setError(err instanceof Error ? err.message : 'Pose initialization failed')
       }
     }
@@ -108,7 +138,10 @@ export function PoseDetector({ videoElement, onResults }: PoseDetectorProps) {
     initializePose()
 
     return () => {
-      pose?.close()
+      if (initialized.current) {
+        pose?.close()
+        initialized.current = false
+      }
     }
     // onResultsは親コンポーネントから渡されるが、初期化時のみ設定すればよい
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -117,24 +150,29 @@ export function PoseDetector({ videoElement, onResults }: PoseDetectorProps) {
   // カメラストリームを設定
   useEffect(() => {
     if (pose && videoElement && isInitialized) {
-      try {
-        const cameraInstance = new MediaPipeCamera(videoElement, {
-          onFrame: async () => {
-            if (canvasRef.current) {
-              canvasRef.current.width = videoElement.videoWidth
-              canvasRef.current.height = videoElement.videoHeight
-            }
-            await pose.send({ image: videoElement })
-          },
-          width: 640,
-          height: 480,
-        })
+      const setupCamera = async () => {
+        try {
+          const { Camera } = await import('@mediapipe/camera_utils')
+          const cameraInstance = new Camera(videoElement, {
+            onFrame: async () => {
+              if (canvasRef.current) {
+                canvasRef.current.width = videoElement.videoWidth
+                canvasRef.current.height = videoElement.videoHeight
+              }
+              await pose.send({ image: videoElement })
+            },
+            width: 640,
+            height: 480,
+          })
 
-        setCamera(cameraInstance)
-        cameraInstance.start()
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Camera setup failed')
+          setCamera(cameraInstance)
+          cameraInstance.start()
+        } catch (err) {
+          setError(err instanceof Error ? err.message : 'Camera setup failed')
+        }
       }
+
+      setupCamera()
     }
 
     return () => {

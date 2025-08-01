@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { FaceMesh, type Results } from '@mediapipe/face_mesh'
-import { Camera as MediaPipeCamera } from '@mediapipe/camera_utils'
+import type { FaceMesh, Results } from '@mediapipe/face_mesh'
+import type { Camera as MediaPipeCamera } from '@mediapipe/camera_utils'
 import { drawConnectors, drawLandmarks } from '@mediapipe/drawing_utils'
-import { FACEMESH_TESSELATION } from '@mediapipe/face_mesh'
 import { type FaceMeshResults } from '../types/gait'
 
 interface FaceMeshDetectorProps {
@@ -23,6 +22,7 @@ export function FaceMeshDetector({
   minTrackingConfidence = 0.5
 }: FaceMeshDetectorProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const initialized = useRef(false)
   const [faceMesh, setFaceMesh] = useState<FaceMesh | null>(null)
   const [camera, setCamera] = useState<MediaPipeCamera | null>(null)
   const [isInitialized, setIsInitialized] = useState(false)
@@ -30,15 +30,37 @@ export function FaceMeshDetector({
 
   // MediaPipe Face Meshを初期化
   useEffect(() => {
+    if (initialized.current) {
+      console.log('FaceMeshDetector: Already initialized, skipping')
+      return
+    }
+
+    console.log('FaceMeshDetector: Starting initialization')
+    initialized.current = true
+
     const initializeFaceMesh = async () => {
       try {
         setError(null)
         
-        const faceMeshInstance = new FaceMesh({
-          locateFile: file => {
-            return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
-          },
-        })
+        console.log('FaceMeshDetector: Creating FaceMesh instance')
+        
+        // FaceMeshクラスを動的インポート
+        const { FaceMesh } = await import('@mediapipe/face_mesh')
+        
+        // タイムアウト付きで初期化
+        const faceMeshInstance = await Promise.race([
+          new Promise<FaceMesh>((resolve) => {
+            const faceMesh = new FaceMesh({
+              locateFile: file => {
+                return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/${file}`
+              },
+            })
+            resolve(faceMesh)
+          }),
+          new Promise<never>((_, reject) => {
+            setTimeout(() => reject(new Error('FaceMesh initialization timeout')), 10000)
+          })
+        ])
 
         // 精度向上のための最適化設定
         faceMeshInstance.setOptions({
@@ -48,7 +70,7 @@ export function FaceMeshDetector({
           minTrackingConfidence: Math.max(minTrackingConfidence, 0.6), // 最小0.6に引き上げ
         })
 
-        faceMeshInstance.onResults((results: Results) => {
+        faceMeshInstance.onResults(async (results: Results) => {
           if (canvasRef.current) {
             const canvasElement = canvasRef.current
             const canvasCtx = canvasElement.getContext('2d')!
@@ -59,16 +81,29 @@ export function FaceMeshDetector({
 
             // 顔メッシュを描画
             if (results.multiFaceLandmarks) {
-              for (const landmarks of results.multiFaceLandmarks) {
-                drawConnectors(canvasCtx, landmarks, FACEMESH_TESSELATION, {
-                  color: '#C0C0C070',
-                  lineWidth: 1,
-                })
-                drawLandmarks(canvasCtx, landmarks, {
-                  color: '#FF0000',
-                  lineWidth: 1,
-                  radius: 1,
-                })
+              try {
+                const { FACEMESH_TESSELATION } = await import('@mediapipe/face_mesh')
+                for (const landmarks of results.multiFaceLandmarks) {
+                  drawConnectors(canvasCtx, landmarks, FACEMESH_TESSELATION, {
+                    color: '#C0C0C070',
+                    lineWidth: 1,
+                  })
+                  drawLandmarks(canvasCtx, landmarks, {
+                    color: '#FF0000',
+                    lineWidth: 1,
+                    radius: 1,
+                  })
+                }
+              } catch {
+                // FACEMESH_TESSSELATIONが利用できない場合はランドマークのみ描画
+                console.warn('FACEMESH_TESSELATION not available, drawing landmarks only')
+                for (const landmarks of results.multiFaceLandmarks) {
+                  drawLandmarks(canvasCtx, landmarks, {
+                    color: '#FF0000',
+                    lineWidth: 1,
+                    radius: 1,
+                  })
+                }
               }
             }
 
@@ -85,10 +120,15 @@ export function FaceMeshDetector({
           }
         })
 
+        console.log('FaceMeshDetector: Initializing face mesh instance')
         await faceMeshInstance.initialize()
+        
+        console.log('FaceMeshDetector: Initialization completed successfully')
         setFaceMesh(faceMeshInstance)
         setIsInitialized(true)
       } catch (err) {
+        console.error('FaceMeshDetector: Initialization failed:', err)
+        initialized.current = false
         const errorMessage = err instanceof Error ? err.message : 'Face Mesh initialization failed'
         setError(errorMessage)
       }
@@ -97,32 +137,40 @@ export function FaceMeshDetector({
     initializeFaceMesh()
 
     return () => {
-      faceMesh?.close()
+      if (initialized.current) {
+        faceMesh?.close()
+        initialized.current = false
+      }
     }
   }, [faceMesh, maxNumFaces, refineLandmarks, minDetectionConfidence, minTrackingConfidence, onResults])
 
   // カメラストリームを設定
   useEffect(() => {
     if (faceMesh && videoElement && isInitialized) {
-      try {
-        const cameraInstance = new MediaPipeCamera(videoElement, {
-          onFrame: async () => {
-            if (canvasRef.current) {
-              canvasRef.current.width = videoElement.videoWidth
-              canvasRef.current.height = videoElement.videoHeight
-            }
-            await faceMesh.send({ image: videoElement })
-          },
-          width: 640,
-          height: 480,
-        })
+      const setupCamera = async () => {
+        try {
+          const { Camera } = await import('@mediapipe/camera_utils')
+          const cameraInstance = new Camera(videoElement, {
+            onFrame: async () => {
+              if (canvasRef.current) {
+                canvasRef.current.width = videoElement.videoWidth
+                canvasRef.current.height = videoElement.videoHeight
+              }
+              await faceMesh.send({ image: videoElement })
+            },
+            width: 640,
+            height: 480,
+          })
 
-        setCamera(cameraInstance)
-        cameraInstance.start()
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Camera setup failed'
-        setError(errorMessage)
+          setCamera(cameraInstance)
+          cameraInstance.start()
+        } catch (err) {
+          const errorMessage = err instanceof Error ? err.message : 'Camera setup failed'
+          setError(errorMessage)
+        }
       }
+
+      setupCamera()
     }
 
     return () => {
