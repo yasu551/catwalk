@@ -6,16 +6,14 @@ import { Camera } from './Camera'
 const mockGetUserMedia = vi.fn()
 Object.defineProperty(navigator, 'mediaDevices', {
   value: {
-    getUserMedia: mockGetUserMedia
+    getUserMedia: mockGetUserMedia,
   },
-  writable: true
+  writable: true,
 })
 
 // Mock MediaStream
 const mockStream = {
-  getTracks: vi.fn(() => [
-    { stop: vi.fn() }
-  ])
+  getTracks: vi.fn(() => [{ stop: vi.fn() }]),
 } as unknown as MediaStream
 
 describe('Camera', () => {
@@ -31,22 +29,22 @@ describe('Camera', () => {
   it('shows loading state when starting camera', async () => {
     mockGetUserMedia.mockImplementation(() => new Promise(() => {})) // Never resolves
     render(<Camera />)
-    
+
     fireEvent.click(screen.getByText('Start Camera'))
-    
+
     expect(screen.getByText('Loading...')).toBeInTheDocument()
   })
 
   it('successfully starts camera and shows video', async () => {
     mockGetUserMedia.mockResolvedValue(mockStream)
     render(<Camera />)
-    
+
     fireEvent.click(screen.getByText('Start Camera'))
-    
+
     await waitFor(() => {
       expect(screen.getByText('Stop Camera')).toBeInTheDocument()
     })
-    
+
     const video = document.querySelector('video')
     expect(video).toHaveStyle({ display: 'block' })
   })
@@ -55,9 +53,9 @@ describe('Camera', () => {
     const errorMessage = 'Permission denied'
     mockGetUserMedia.mockRejectedValue(new Error(errorMessage))
     render(<Camera />)
-    
+
     fireEvent.click(screen.getByText('Start Camera'))
-    
+
     await waitFor(() => {
       expect(screen.getByRole('alert')).toHaveTextContent(`Camera access failed: ${errorMessage}`)
     })
@@ -67,9 +65,9 @@ describe('Camera', () => {
     const onStreamMock = vi.fn()
     mockGetUserMedia.mockResolvedValue(mockStream)
     render(<Camera onStream={onStreamMock} />)
-    
+
     fireEvent.click(screen.getByText('Start Camera'))
-    
+
     await waitFor(() => {
       expect(onStreamMock).toHaveBeenCalledWith(mockStream)
     })
@@ -78,25 +76,25 @@ describe('Camera', () => {
   it('stops camera and cleans up stream', async () => {
     const mockTrack = { stop: vi.fn() }
     const mockStreamWithTracks = {
-      getTracks: vi.fn(() => [mockTrack])
+      getTracks: vi.fn(() => [mockTrack]),
     } as unknown as MediaStream
-    
+
     mockGetUserMedia.mockResolvedValue(mockStreamWithTracks)
     render(<Camera />)
-    
+
     // Start camera
     fireEvent.click(screen.getByText('Start Camera'))
     await waitFor(() => {
       expect(screen.getByText('Stop Camera')).toBeInTheDocument()
     })
-    
+
     // Stop camera
     fireEvent.click(screen.getByText('Stop Camera'))
-    
+
     await waitFor(() => {
       expect(screen.getByText('Start Camera')).toBeInTheDocument()
     })
-    
+
     expect(mockTrack.stop).toHaveBeenCalled()
   })
 })

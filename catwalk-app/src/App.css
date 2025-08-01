@@ -133,16 +133,16 @@
   .app {
     padding: 1rem;
   }
-  
+
   .app-header h1 {
     font-size: 2rem;
   }
-  
+
   .app-main {
     grid-template-columns: 1fr;
     gap: 1.5rem;
   }
-  
+
   .camera-section,
   .pose-section {
     padding: 1rem;

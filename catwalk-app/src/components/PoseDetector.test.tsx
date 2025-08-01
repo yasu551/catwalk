@@ -7,10 +7,10 @@ const mockCanvasContext = {
   save: vi.fn(),
   restore: vi.fn(),
   clearRect: vi.fn(),
-  drawImage: vi.fn()
+  drawImage: vi.fn(),
 }
 
-HTMLCanvasElement.prototype.getContext = vi.fn(() => mockCanvasContext)
+HTMLCanvasElement.prototype.getContext = vi.fn(() => mockCanvasContext) as unknown as HTMLCanvasElement['getContext']
 
 // Mock MediaPipe modules
 vi.mock('@mediapipe/pose', () => ({
@@ -20,20 +20,20 @@ vi.mock('@mediapipe/pose', () => ({
     initialize: vi.fn().mockResolvedValue(undefined),
     send: vi.fn(),
     close: vi.fn(),
-    POSE_CONNECTIONS: []
-  }))
+    POSE_CONNECTIONS: [],
+  })),
 }))
 
 vi.mock('@mediapipe/camera_utils', () => ({
   Camera: vi.fn().mockImplementation(() => ({
     start: vi.fn(),
-    stop: vi.fn()
-  }))
+    stop: vi.fn(),
+  })),
 }))
 
 vi.mock('@mediapipe/drawing_utils', () => ({
   drawConnectors: vi.fn(),
-  drawLandmarks: vi.fn()
+  drawLandmarks: vi.fn(),
 }))
 
 describe('PoseDetector', () => {
@@ -55,17 +55,20 @@ describe('PoseDetector', () => {
 
   it('handles initialization error', async () => {
     const { Pose } = await import('@mediapipe/pose')
-    vi.mocked(Pose).mockImplementation(() => ({
-      setOptions: vi.fn(),
-      onResults: vi.fn(),
-      initialize: vi.fn().mockRejectedValue(new Error('Init failed')),
-      send: vi.fn(),
-      close: vi.fn(),
-      POSE_CONNECTIONS: []
-    }) as any)
+    vi.mocked(Pose).mockImplementation(
+      () =>
+        ({
+          setOptions: vi.fn(),
+          onResults: vi.fn(),
+          initialize: vi.fn().mockRejectedValue(new Error('Init failed')),
+          send: vi.fn(),
+          close: vi.fn(),
+          POSE_CONNECTIONS: [],
+        }) as unknown as InstanceType<typeof Pose>
+    )
 
     render(<PoseDetector />)
-    
+
     await waitFor(() => {
       expect(screen.getByRole('alert')).toHaveTextContent('Error: Init failed')
     })
@@ -74,21 +77,24 @@ describe('PoseDetector', () => {
   it('calls onResults callback when pose results are received', async () => {
     const onResultsMock = vi.fn()
     const { Pose } = await import('@mediapipe/pose')
-    
-    let onResultsCallback: any
-    vi.mocked(Pose).mockImplementation(() => ({
-      setOptions: vi.fn(),
-      onResults: vi.fn((callback) => {
-        onResultsCallback = callback
-      }),
-      initialize: vi.fn().mockResolvedValue(undefined),
-      send: vi.fn(),
-      close: vi.fn(),
-      POSE_CONNECTIONS: []
-    }) as any)
+
+    let onResultsCallback: ((results: unknown) => void) | null = null
+    vi.mocked(Pose).mockImplementation(
+      () =>
+        ({
+          setOptions: vi.fn(),
+          onResults: vi.fn((callback: (results: unknown) => void) => {
+            onResultsCallback = callback
+          }),
+          initialize: vi.fn().mockResolvedValue(undefined),
+          send: vi.fn(),
+          close: vi.fn(),
+          POSE_CONNECTIONS: [],
+        }) as unknown as InstanceType<typeof Pose>
+    )
 
     render(<PoseDetector onResults={onResultsMock} />)
-    
+
     // Wait for initialization
     await waitFor(() => {
       expect(screen.queryByText('Initializing pose detection...')).not.toBeInTheDocument()
@@ -98,13 +104,13 @@ describe('PoseDetector', () => {
     if (onResultsCallback) {
       const mockResults = {
         image: document.createElement('canvas'),
-        poseLandmarks: []
+        poseLandmarks: [],
       }
-      
+
       await act(async () => {
-        onResultsCallback(mockResults)
+        onResultsCallback?.(mockResults)
       })
-      
+
       expect(onResultsMock).toHaveBeenCalledWith(mockResults)
     }
   })
@@ -116,7 +122,7 @@ describe('PoseDetector', () => {
       width: '100%',
       maxWidth: '640px',
       height: 'auto',
-      border: '1px solid #ccc'
+      border: '1px solid #ccc',
     })
   })
 })

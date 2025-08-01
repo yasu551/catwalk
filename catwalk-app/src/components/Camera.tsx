@@ -19,9 +19,9 @@ export function Camera({ onStream }: CameraProps) {
         video: {
           width: { ideal: 1280 },
           height: { ideal: 720 },
-          facingMode: 'user'
+          facingMode: 'user',
         },
-        audio: false
+        audio: false,
       })
 
       if (videoRef.current) {
@@ -81,7 +81,7 @@ export function Camera({ onStream }: CameraProps) {
           width: '100%',
           maxWidth: '640px',
           height: 'auto',
-          display: hasPermission ? 'block' : 'none'
+          display: hasPermission ? 'block' : 'none',
         }}
       />
     </div>

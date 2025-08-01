@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Pose, Results } from '@mediapipe/pose'
+import { Pose, type Results, POSE_CONNECTIONS } from '@mediapipe/pose'
 import { Camera as MediaPipeCamera } from '@mediapipe/camera_utils'
 import { drawConnectors, drawLandmarks } from '@mediapipe/drawing_utils'
 
@@ -20,9 +20,9 @@ export function PoseDetector({ videoElement, onResults }: PoseDetectorProps) {
     const initializePose = async () => {
       try {
         const poseInstance = new Pose({
-          locateFile: (file) => {
+          locateFile: file => {
             return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
-          }
+          },
         })
 
         poseInstance.setOptions({
@@ -31,34 +31,34 @@ export function PoseDetector({ videoElement, onResults }: PoseDetectorProps) {
           enableSegmentation: false,
           smoothSegmentation: true,
           minDetectionConfidence: 0.5,
-          minTrackingConfidence: 0.5
+          minTrackingConfidence: 0.5,
         })
 
         poseInstance.onResults((results: Results) => {
           if (canvasRef.current) {
             const canvasElement = canvasRef.current
             const canvasCtx = canvasElement.getContext('2d')!
-            
+
             canvasCtx.save()
             canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height)
             canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height)
-            
+
             // 姿勢のランドマークを描画
             if (results.poseLandmarks) {
-              drawConnectors(canvasCtx, results.poseLandmarks, Pose.POSE_CONNECTIONS, {
+              drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, {
                 color: '#00FF00',
-                lineWidth: 2
+                lineWidth: 2,
               })
               drawLandmarks(canvasCtx, results.poseLandmarks, {
                 color: '#FF0000',
                 lineWidth: 1,
-                radius: 2
+                radius: 2,
               })
             }
-            
+
             canvasCtx.restore()
           }
-          
+
           onResults?.(results)
         })
 
@@ -75,6 +75,8 @@ export function PoseDetector({ videoElement, onResults }: PoseDetectorProps) {
     return () => {
       pose?.close()
     }
+    // onResultsは親コンポーネントから渡されるが、初期化時のみ設定すればよい
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // カメラストリームを設定
@@ -90,7 +92,7 @@ export function PoseDetector({ videoElement, onResults }: PoseDetectorProps) {
             await pose.send({ image: videoElement })
           },
           width: 640,
-          height: 480
+          height: 480,
         })
 
         setCamera(cameraInstance)
@@ -103,7 +105,7 @@ export function PoseDetector({ videoElement, onResults }: PoseDetectorProps) {
     return () => {
       camera?.stop()
     }
-  }, [pose, videoElement, isInitialized])
+  }, [pose, videoElement, isInitialized, camera])
 
   if (error) {
     return (
@@ -122,14 +124,10 @@ export function PoseDetector({ videoElement, onResults }: PoseDetectorProps) {
           width: '100%',
           maxWidth: '640px',
           height: 'auto',
-          border: '1px solid #ccc'
+          border: '1px solid #ccc',
         }}
       />
-      {!isInitialized && (
-        <div className="pose-loading">
-          Initializing pose detection...
-        </div>
-      )}
+      {!isInitialized && <div className="pose-loading">Initializing pose detection...</div>}
     </div>
   )
 }
