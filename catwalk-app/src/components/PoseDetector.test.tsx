@@ -20,8 +20,8 @@ vi.mock('@mediapipe/pose', () => ({
     initialize: vi.fn().mockResolvedValue(undefined),
     send: vi.fn(),
     close: vi.fn(),
-    POSE_CONNECTIONS: [],
   })),
+  POSE_CONNECTIONS: [],
 }))
 
 vi.mock('@mediapipe/camera_utils', () => ({

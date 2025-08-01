@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { Pose, type Results, POSE_CONNECTIONS } from '@mediapipe/pose'
 import { Camera as MediaPipeCamera } from '@mediapipe/camera_utils'
 import { drawConnectors, drawLandmarks } from '@mediapipe/drawing_utils'
+import { calculateCenterOfGravity } from '../utils/centerOfGravity'
+import { globalTrajectoryTracker } from '../utils/trajectoryTracker'
+import { type PoseLandmark } from '../types/gait'
 
 interface PoseDetectorProps {
   videoElement?: HTMLVideoElement
@@ -54,6 +57,38 @@ export function PoseDetector({ videoElement, onResults }: PoseDetectorProps) {
                 lineWidth: 1,
                 radius: 2,
               })
+
+              // 重心計算と軌跡追跡
+              try {
+                // MediaPipeの結果をPoseLandmark形式に変換
+                const landmarks: PoseLandmark[] = results.poseLandmarks.map(landmark => ({
+                  x: landmark.x,
+                  y: landmark.y,
+                  z: landmark.z,
+                  visibility: landmark.visibility
+                }))
+
+                // 重心を計算
+                const cog = calculateCenterOfGravity(landmarks, Date.now())
+                
+                // 軌跡トラッカーに追加
+                globalTrajectoryTracker.addCenterOfGravity(cog)
+
+                // 重心位置をキャンバスに描画
+                const cogX = cog.x * canvasElement.width
+                const cogY = cog.y * canvasElement.height
+                
+                canvasCtx.beginPath()
+                canvasCtx.arc(cogX, cogY, 8, 0, 2 * Math.PI)
+                canvasCtx.fillStyle = '#00FFFF' // シアン色で重心を表示
+                canvasCtx.fill()
+                canvasCtx.strokeStyle = '#000000'
+                canvasCtx.lineWidth = 2
+                canvasCtx.stroke()
+              } catch (error) {
+                // 重心計算に失敗した場合は無視（信頼度が低い等）
+                console.debug('Center of gravity calculation failed:', error)
+              }
             }
 
             canvasCtx.restore()

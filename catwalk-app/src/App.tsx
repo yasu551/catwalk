@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Camera } from './components/Camera'
 import { PoseDetector } from './components/PoseDetector'
+import { TrajectoryVisualization } from './components/TrajectoryVisualization'
 import './App.css'
 
 function App() {
@@ -28,10 +29,21 @@ function App() {
         </div>
 
         {stream && videoElement && (
-          <div className="pose-section">
-            <h2>姿勢検出</h2>
-            <PoseDetector videoElement={videoElement} />
-          </div>
+          <>
+            <div className="pose-section">
+              <h2>姿勢検出</h2>
+              <PoseDetector videoElement={videoElement} />
+            </div>
+
+            <div className="trajectory-section">
+              <h2>歩行軌跡分析</h2>
+              <TrajectoryVisualization 
+                width={600} 
+                height={400} 
+                className="trajectory-visualization-main"
+              />
+            </div>
+          </>
         )}
       </main>
     </div>
