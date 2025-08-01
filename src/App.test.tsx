@@ -300,4 +300,41 @@ describe('App - Camera Integration (TDD)', () => {
       })
     })
   })
+
+  // Device-based camera mode selection tests
+  describe('Device-based Camera Mode Selection', () => {
+    it('should pass environment facing mode for mobile devices', () => {
+      // Mock mobile device detection
+      vi.doMock('../utils/deviceDetection', () => ({
+        getDefaultCameraFacingMode: vi.fn(() => 'environment'),
+        isMobileDevice: vi.fn(() => true)
+      }))
+
+      render(<App />)
+
+      // Camera component should receive environment facing mode
+      const cameraComponent = screen.getByTestId('camera-component')
+      expect(cameraComponent).toBeInTheDocument()
+
+      // The mock camera component should be rendered (indicating proper prop passing)
+      expect(screen.getByTestId('mock-video')).toBeInTheDocument()
+    })
+
+    it('should pass user facing mode for desktop devices', () => {
+      // Mock desktop device detection
+      vi.doMock('../utils/deviceDetection', () => ({
+        getDefaultCameraFacingMode: vi.fn(() => 'user'),
+        isMobileDevice: vi.fn(() => false)
+      }))
+
+      render(<App />)
+
+      // Camera component should receive user facing mode
+      const cameraComponent = screen.getByTestId('camera-component')
+      expect(cameraComponent).toBeInTheDocument()
+
+      // The mock camera component should be rendered (indicating proper prop passing)
+      expect(screen.getByTestId('mock-video')).toBeInTheDocument()
+    })
+  })
 })

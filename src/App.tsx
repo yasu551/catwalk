@@ -6,6 +6,7 @@ import { GaitClassificationDisplay } from './components/GaitClassificationDispla
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { globalTrajectoryTracker } from './utils/trajectoryTracker'
 import { classifyGaitPattern } from './utils/gaitAnalysis'
+import { getDefaultCameraFacingMode } from './utils/deviceDetection'
 import { type GaitClassification } from './types/gait'
 import './App.css'
 
@@ -99,7 +100,11 @@ function App() {
         <main className="app-main" role="main">
         <section className="camera-section" aria-labelledby="camera-heading">
           <h2 id="camera-heading">カメラ映像</h2>
-          <Camera onStream={handleStream} onCameraChange={handleCameraChange} />
+          <Camera 
+            onStream={handleStream} 
+            onCameraChange={handleCameraChange}
+            defaultFacingMode={getDefaultCameraFacingMode()}
+          />
         </section>
 
         {stream && videoElement && (
