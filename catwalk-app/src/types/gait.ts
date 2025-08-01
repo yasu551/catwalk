@@ -31,3 +31,26 @@ export interface PoseLandmark {
   z: number
   visibility?: number
 }
+
+// MediaPipeの顔ランドマーク点
+export interface FaceLandmark {
+  x: number
+  y: number
+  z: number
+}
+
+// Face Mesh検出結果
+export interface FaceMeshResults {
+  multiFaceLandmarks?: FaceLandmark[][]
+  image: HTMLVideoElement | HTMLImageElement | HTMLCanvasElement
+}
+
+// 顔領域情報
+export interface FaceRegion {
+  centerX: number
+  centerY: number
+  width: number
+  height: number
+  confidence: number
+  landmarks: FaceLandmark[]
+}

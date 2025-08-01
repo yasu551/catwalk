@@ -257,34 +257,35 @@ function calculateAdaptiveRegularityScore(velocityVariation: number, temporalAna
 }
 
 /**
- * 適応的閾値による分類
+ * 適応的閾値による分類（最適化版）
  */
 function classifyPatternWithAdaptiveThresholds(
   score: number, 
   sampleSize: number, 
   dataQuality: number
 ): { pattern: 'catwalk' | 'drunk' | 'unknown', baseConfidence: number } {
-  // サンプルサイズとデータ品質に基づいて閾値を調整
-  const qualityFactor = Math.max(0.7, dataQuality)
-  const sizeFactor = Math.min(1.0, sampleSize / 10)
+  // サンプルサイズとデータ品質に基づいて閾値を調整（最適化版）
+  const qualityFactor = Math.max(0.75, Math.min(1.0, dataQuality)) // 範囲を狭めて安定化
+  const sizeFactor = Math.min(1.0, sampleSize / 8) // より少ないサンプルで最大効果
   
-  const catwalkThreshold = 75 * qualityFactor * sizeFactor
-  const drunkThreshold = 35 * qualityFactor * sizeFactor
+  // チューニングされた閾値（より厳しい基準）
+  const catwalkThreshold = 78 * qualityFactor * sizeFactor // 75→78に引き上げ
+  const drunkThreshold = 32 * qualityFactor * sizeFactor   // 35→32に引き下げ
   
   if (score >= catwalkThreshold) {
     return {
       pattern: 'catwalk',
-      baseConfidence: Math.min(0.95, score / 100)
+      baseConfidence: Math.min(0.92, score / 100) // 0.95→0.92に調整
     }
   } else if (score <= drunkThreshold) {
     return {
       pattern: 'drunk', 
-      baseConfidence: Math.min(0.95, (100 - score) / 100)
+      baseConfidence: Math.min(0.92, (100 - score) / 100)
     }
   } else {
     return {
       pattern: 'unknown',
-      baseConfidence: Math.abs(score - 50) / 50 * 0.5
+      baseConfidence: Math.min(0.7, Math.abs(score - 50) / 50 * 0.6) // より保守的な信頼度
     }
   }
 }

@@ -20,20 +20,31 @@ function App() {
     setVideoElement(video)
   }
 
-  // リアルタイム歩行分析の更新
+  // リアルタイム歩行分析の更新（最適化版）
   useEffect(() => {
     if (!stream) return
 
+    let lastAnalysisTime = 0
+    const ANALYSIS_THROTTLE = 800 // 800msに短縮（応答性向上）
+    
     const updateGaitClassification = () => {
-      const trajectory = globalTrajectoryTracker.getRecentCenterOfGravity(20) // 最新20点で分析
+      const currentTime = Date.now()
+      
+      // スロットリング（CPU負荷軽減）
+      if (currentTime - lastAnalysisTime < ANALYSIS_THROTTLE) {
+        return
+      }
+      
+      const trajectory = globalTrajectoryTracker.getRecentCenterOfGravity(15) // 20→15に削減（処理軽量化）
       if (trajectory.length >= 5) {
         const classification = classifyGaitPattern(trajectory)
         setGaitClassification(classification)
+        lastAnalysisTime = currentTime
       }
     }
 
-    // 1秒間隔で分析を更新
-    const interval = setInterval(updateGaitClassification, 1000)
+    // より頻繁な更新間隔（応答性向上）
+    const interval = setInterval(updateGaitClassification, 600) // 1000→600msに短縮
 
     return () => clearInterval(interval)
   }, [stream])

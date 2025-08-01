@@ -1,12 +1,12 @@
 import { type CenterOfGravity, type GaitAnalysis } from '../types/gait'
 import { analyzeGaitPattern, filterOutliers } from './centerOfGravity'
 
-// 軌跡追跡の設定
+// 軌跡追跡の設定（最適化版）
 const CONFIG = {
-  MAX_HISTORY_SIZE: 50, // 最大履歴サイズ（メモリ効率化のため削減）
-  MIN_ANALYSIS_POINTS: 8, // 分析に必要な最小データ点数（計算効率化）
-  UPDATE_INTERVAL: 150, // 更新間隔（ミリ秒）（CPU負荷軽減）
-  BATCH_CLEANUP_SIZE: 10, // バッチクリーンアップサイズ
+  MAX_HISTORY_SIZE: 40, // 50→40に削減（メモリ効率化）
+  MIN_ANALYSIS_POINTS: 6, // 8→6に削減（より早い判定開始）
+  UPDATE_INTERVAL: 120, // 150→120に短縮（応答性向上）
+  BATCH_CLEANUP_SIZE: 8, // 10→8に削減（効率化）
 }
 
 /**
