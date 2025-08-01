@@ -24,7 +24,7 @@ style: |
     color: #7f8c8d;
   }
   ul {
-    font-size: 1.1em;
+    font-size: 0.8em;
   }
   code {
     background-color: #f8f9fa;
