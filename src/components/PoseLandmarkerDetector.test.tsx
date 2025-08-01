@@ -205,7 +205,7 @@ describe('PoseLandmarkerDetector', () => {
     })
 
     it('should clean up animation frame when videoElement changes', async () => {
-      const cancelAnimationFrameSpy = vi.spyOn(globalThis, 'cancelAnimationFrame')
+      vi.spyOn(globalThis, 'cancelAnimationFrame')
       
       // animation frameをトリガーするために十分な条件を設定
       Object.defineProperty(mockVideoElement, 'videoWidth', { value: 640 })
@@ -266,7 +266,7 @@ describe('PoseLandmarkerDetector', () => {
 
     it('should handle null to non-null videoElement transition', () => {
       const { rerender } = render(
-        <PoseLandmarkerDetector videoElement={null} />
+        <PoseLandmarkerDetector videoElement={undefined} />
       )
 
       expect(screen.getByText('Initializing pose landmark detection...')).toBeInTheDocument()
@@ -289,8 +289,8 @@ describe('PoseLandmarkerDetector', () => {
       // MediaPipeの初期化を待つ
       await new Promise(resolve => setTimeout(resolve, 100))
 
-      // video element を null に変更
-      rerender(<PoseLandmarkerDetector videoElement={null} />)
+      // video element を undefined に変更
+      rerender(<PoseLandmarkerDetector videoElement={undefined} />)
 
       // クリーンアップを待つ
       await new Promise(resolve => setTimeout(resolve, 50))

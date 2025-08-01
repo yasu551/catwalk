@@ -184,7 +184,6 @@ describe('App - Camera Integration (TDD)', () => {
   // Phase 2: handleStream と handleCameraChange の連携テスト (TDD RED)
   describe('Stream and Camera Change Integration', () => {
     it('should update video element through handleStream before handleCameraChange', async () => {
-      const mockStream = { id: 'test-stream' } as unknown as MediaStream
       
       // document.querySelector のモックを更新
       const mockVideo = { 

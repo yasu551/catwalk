@@ -24,10 +24,10 @@ function App() {
     // video element更新を待機（非同期処理のタイミング対応）
     await new Promise(resolve => setTimeout(resolve, 50))
     
-    const video = document.querySelector('video') as HTMLVideoElement
+    const video = document.querySelector('video')
     if (video) {
       // video elementが見つかった場合は常に設定（streamの確認は一度だけ）
-      setVideoElement(video)
+      setVideoElement(video as HTMLVideoElement)
       
       if (facingMode) {
         console.log('Camera switched to:', facingMode)
@@ -40,8 +40,8 @@ function App() {
     } else {
       // video elementが見つからない場合の警告
       console.warn('Video element not found or stream not set:', { 
-        videoFound: !!video, 
-        streamSet: video?.srcObject === stream 
+        videoFound: false, 
+        streamSet: false
       })
     }
   }

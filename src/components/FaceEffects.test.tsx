@@ -4,7 +4,6 @@ import { FaceEffects } from './FaceEffects'
 import { type FaceRegion, type GaitClassification } from '../types/gait'
 
 describe('FaceEffects', () => {
-  let mockCanvas: HTMLCanvasElement
   let mockContext: CanvasRenderingContext2D
 
   beforeEach(() => {
@@ -221,7 +220,7 @@ describe('FaceEffects', () => {
     // 描画メソッドが呼ばれることを期待（複数の顔に対応）
     await waitFor(() => {
       expect(mockContext.ellipse).toHaveBeenCalled() // 複数回呼ばれることを確認
-      expect(mockContext.ellipse.mock.calls.length).toBeGreaterThanOrEqual(4) // 最低4回以上
+      expect((mockContext.ellipse as any).mock.calls.length).toBeGreaterThanOrEqual(4) // 最低4回以上
     })
   })
 
