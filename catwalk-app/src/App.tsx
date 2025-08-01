@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Camera } from './components/Camera'
-import { PoseDetector } from './components/PoseDetector'
+import { PoseLandmarkerDetector } from './components/PoseLandmarkerDetector'
 import { TrajectoryVisualization } from './components/TrajectoryVisualization'
 import { GaitClassificationDisplay } from './components/GaitClassificationDisplay'
 import { ErrorBoundary } from './components/ErrorBoundary'
@@ -68,7 +68,7 @@ function App() {
           <>
             <section className="pose-section" aria-labelledby="pose-heading">
               <h2 id="pose-heading">姿勢検出</h2>
-              <PoseDetector videoElement={videoElement} />
+              <PoseLandmarkerDetector videoElement={videoElement} />
             </section>
 
             <section className="trajectory-section" aria-labelledby="trajectory-heading">
