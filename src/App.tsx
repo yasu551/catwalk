@@ -21,6 +21,17 @@ function App() {
     setVideoElement(video)
   }
 
+  const handleCameraChange = (facingMode: 'user' | 'environment') => {
+    // カメラ切り替え時の処理
+    console.log('Camera switched to:', facingMode)
+    
+    // video elementを再取得（カメラ切り替え後に新しいstreamが適用される）
+    const video = document.querySelector('video') as HTMLVideoElement
+    if (video) {
+      setVideoElement(video)
+    }
+  }
+
   // リアルタイム歩行分析の更新（最適化版）
   useEffect(() => {
     if (!stream) return
@@ -61,7 +72,7 @@ function App() {
         <main className="app-main" role="main">
         <section className="camera-section" aria-labelledby="camera-heading">
           <h2 id="camera-heading">カメラ映像</h2>
-          <Camera onStream={handleStream} />
+          <Camera onStream={handleStream} onCameraChange={handleCameraChange} />
         </section>
 
         {stream && videoElement && (
