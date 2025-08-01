@@ -83,9 +83,17 @@ export function PoseLandmarkerDetector({
     }
   }, [numPoses, minPoseDetectionConfidence, minPosePresenceConfidence, minTrackingConfidence, outputSegmentationMasks, runningMode])
 
-  // ビデオフレーム処理
+  // ビデオフレーム処理 (videoElement変更時の再初期化対応)
   useEffect(() => {
+    // 既存のanimation frameをクリーンアップ（video element変更時）
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current)
+      animationFrameRef.current = undefined
+    }
+
     if (poseLandmarker && videoElement && isInitialized && canvasRef.current) {
+      console.log('PoseLandmarkerDetector: Starting frame processing with new video element')
+      
       const processVideoFrame = () => {
         if (!poseLandmarker || !videoElement || !canvasRef.current) {
           return
@@ -194,11 +202,15 @@ export function PoseLandmarkerDetector({
 
       // フレーム処理を開始
       processVideoFrame()
+    } else if (!videoElement) {
+      console.log('PoseLandmarkerDetector: Video element is null, stopping frame processing')
     }
 
     return () => {
       if (animationFrameRef.current) {
+        console.log('PoseLandmarkerDetector: Cleaning up animation frame')
         cancelAnimationFrame(animationFrameRef.current)
+        animationFrameRef.current = undefined
       }
     }
   }, [poseLandmarker, videoElement, isInitialized, onResults])

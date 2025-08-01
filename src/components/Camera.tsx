@@ -57,6 +57,39 @@ export function Camera({ onStream, defaultFacingMode = 'user', onCameraChange }:
     }
   }
 
+  // video elementのストリーム設定を待機するヘルパー関数
+  const waitForVideoReady = async (stream: MediaStream): Promise<void> => {
+    return new Promise<void>((resolve) => {
+      const checkVideoReady = () => {
+        if (videoRef.current && videoRef.current.srcObject === stream) {
+          resolve()
+        } else {
+          setTimeout(checkVideoReady, 10)
+        }
+      }
+      checkVideoReady()
+    })
+  }
+
+  // ストリーム取得と設定のヘルパー関数
+  const createAndSetStream = async (targetFacingMode: 'user' | 'environment'): Promise<MediaStream> => {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+        facingMode: targetFacingMode,
+      },
+      audio: false,
+    })
+
+    if (videoRef.current) {
+      videoRef.current.srcObject = stream
+    }
+
+    await waitForVideoReady(stream)
+    return stream
+  }
+
   const switchCamera = async () => {
     if (!hasPermission) return
     
@@ -67,16 +100,29 @@ export function Camera({ onStream, defaultFacingMode = 'user', onCameraChange }:
       // 既存のストリームを停止
       stopCamera()
       
-      // 新しいfacingModeでカメラを開始
-      await startCamera(newFacingMode)
+      // 新しいfacingModeでストリーム取得と設定
+      const stream = await createAndSetStream(newFacingMode)
+
+      // 状態更新
+      setHasPermission(true)
+      setFacingMode(newFacingMode)
+
+      // コールバック実行（順序保証: onStream -> onCameraChange）
+      onStream?.(stream)
+      onCameraChange?.(newFacingMode)
+      
     } catch (err) {
       // カメラ切り替えに失敗した場合、元のfacingModeに戻す
       console.warn('Camera switch failed, reverting to previous mode:', err)
       setError('Camera switch failed. Reverting to previous camera.')
       
       try {
-        // 元のfacingModeでカメラを再開
-        await startCamera(currentFacingMode)
+        // 元のfacingModeでカメラを再開（エラーをクリアしないように）
+        const stream = await createAndSetStream(currentFacingMode)
+        setHasPermission(true)
+        onStream?.(stream)
+        // facingModeは変更しない（元の値を保持）
+        // エラーメッセージは保持（ユーザーに切り替え失敗を知らせるため）
       } catch (revertErr) {
         // 復旧も失敗した場合
         console.error('Failed to revert to previous camera mode:', revertErr)

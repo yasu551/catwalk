@@ -14,21 +14,48 @@ function App() {
   const [stream, setStream] = useState<MediaStream | null>(null)
   const [gaitClassification, setGaitClassification] = useState<GaitClassification | null>(null)
 
-  const handleStream = (newStream: MediaStream) => {
-    setStream(newStream)
-    // Get video element reference from Camera component
+  // 統合されたストリーム更新ハンドラー
+  const handleStreamAndCameraChange = async (
+    stream: MediaStream, 
+    facingMode?: 'user' | 'environment'
+  ) => {
+    setStream(stream)
+    
+    // video element更新を待機（非同期処理のタイミング対応）
+    await new Promise(resolve => setTimeout(resolve, 50))
+    
     const video = document.querySelector('video') as HTMLVideoElement
-    setVideoElement(video)
+    if (video) {
+      // video elementが見つかった場合は常に設定（streamの確認は一度だけ）
+      setVideoElement(video)
+      
+      if (facingMode) {
+        console.log('Camera switched to:', facingMode)
+      }
+      
+      // streamが設定されていない場合のみ警告
+      if (video.srcObject !== stream) {
+        console.warn('Video element stream not yet set, but element found')
+      }
+    } else {
+      // video elementが見つからない場合の警告
+      console.warn('Video element not found or stream not set:', { 
+        videoFound: !!video, 
+        streamSet: video?.srcObject === stream 
+      })
+    }
+  }
+
+  const handleStream = (newStream: MediaStream) => {
+    handleStreamAndCameraChange(newStream)
   }
 
   const handleCameraChange = (facingMode: 'user' | 'environment') => {
-    // カメラ切り替え時の処理
-    console.log('Camera switched to:', facingMode)
-    
-    // video elementを再取得（カメラ切り替え後に新しいstreamが適用される）
-    const video = document.querySelector('video') as HTMLVideoElement
-    if (video) {
-      setVideoElement(video)
+    // カメラ切り替え時は既存のstreamを保持しつつvideo elementを更新
+    if (stream) {
+      handleStreamAndCameraChange(stream, facingMode)
+    } else {
+      console.warn('Camera change requested but no stream available')
     }
   }
 

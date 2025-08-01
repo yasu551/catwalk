@@ -8,11 +8,26 @@ vi.mock('./components/Camera', () => ({
     onStream?: (stream: MediaStream) => void
     onCameraChange?: (facingMode: 'user' | 'environment') => void 
   }) => {
-    const mockStream = {} as MediaStream
+    const mockStream = { id: 'test-stream' } as MediaStream
+    
+    // video elementにstreamが設定されることをシミュレート
+    const handleStreamStart = () => {
+      onStream?.(mockStream)
+      // DOMのvideo elementのsrcObjectを設定
+      setTimeout(() => {
+        const video = document.querySelector('video') as HTMLVideoElement
+        if (video) {
+          Object.defineProperty(video, 'srcObject', {
+            value: mockStream,
+            writable: true
+          })
+        }
+      }, 10)
+    }
     
     return (
       <div data-testid="camera-component">
-        <button onClick={() => onStream?.(mockStream)} data-testid="mock-start-camera">
+        <button onClick={handleStreamStart} data-testid="mock-start-camera">
           Start Camera
         </button>
         <button 
@@ -50,7 +65,12 @@ vi.mock('./components/ErrorBoundary', () => ({
 }))
 
 // Mock document.querySelector for video element
-const mockVideoElement = { play: vi.fn(), pause: vi.fn() } as unknown as HTMLVideoElement
+const mockVideoElement = { 
+  play: vi.fn(), 
+  pause: vi.fn(),
+  srcObject: null 
+} as unknown as HTMLVideoElement
+
 Object.defineProperty(document, 'querySelector', {
   value: vi.fn((selector: string) => {
     if (selector === 'video') return mockVideoElement
@@ -157,6 +177,127 @@ describe('App - Camera Integration (TDD)', () => {
         const poseDetector = screen.getByTestId('pose-detector-component')
         expect(poseDetector).toBeInTheDocument()
         // MediaPipeコンポーネントが新しいstreamを受け取っていることを間接的に確認
+      })
+    })
+  })
+
+  // Phase 2: handleStream と handleCameraChange の連携テスト (TDD RED)
+  describe('Stream and Camera Change Integration', () => {
+    it('should update video element through handleStream before handleCameraChange', async () => {
+      const mockStream = { id: 'test-stream' } as unknown as MediaStream
+      
+      // document.querySelector のモックを更新
+      const mockVideo = { 
+        srcObject: null,
+        play: vi.fn(),
+        pause: vi.fn() 
+      } as unknown as HTMLVideoElement
+      
+      const querySelectorSpy = vi.fn((selector: string) => {
+        if (selector === 'video') return mockVideo
+        return null
+      })
+      Object.defineProperty(document, 'querySelector', {
+        value: querySelectorSpy,
+        writable: true,
+      })
+
+      render(<App />)
+
+      // カメラ開始（handleStreamが呼ばれる）
+      fireEvent.click(screen.getByTestId('mock-start-camera'))
+      
+      // handleStreamによってvideo elementが設定されることを確認
+      await waitFor(() => {
+        expect(querySelectorSpy).toHaveBeenCalledWith('video')
+        expect(screen.getByTestId('pose-detector-component')).toBeInTheDocument()
+      })
+
+      // カメラ切り替え（handleCameraChangeが呼ばれる）
+      fireEvent.click(screen.getByTestId('mock-switch-camera'))
+
+      // このテストは現在失敗する可能性（統合ハンドラーが未実装のため）
+      await waitFor(() => {
+        // handleCameraChangeによって再度video elementが取得されることを確認
+        expect(querySelectorSpy).toHaveBeenCalledTimes(2) // 初回 + カメラ切り替え時
+        expect(screen.getByTestId('pose-detector-component')).toBeInTheDocument()
+      })
+    })
+
+    it('should handle video element timing issues during camera switch', async () => {
+      let videoCallCount = 0
+      const mockVideo1 = { 
+        srcObject: null,
+        id: 'video1' 
+      } as unknown as HTMLVideoElement
+      const mockVideo2 = { 
+        srcObject: { id: 'new-stream' } as unknown as MediaStream,
+        id: 'video2' 
+      } as unknown as HTMLVideoElement
+
+      // video elementが段階的に更新されることをシミュレート
+      const querySelectorSpy = vi.fn((selector: string) => {
+        if (selector === 'video') {
+          videoCallCount++
+          return videoCallCount === 1 ? mockVideo1 : mockVideo2
+        }
+        return null
+      })
+      
+      Object.defineProperty(document, 'querySelector', {
+        value: querySelectorSpy,
+        writable: true,
+      })
+
+      render(<App />)
+
+      // カメラ開始
+      fireEvent.click(screen.getByTestId('mock-start-camera'))
+      
+      await waitFor(() => {
+        expect(screen.getByTestId('pose-detector-component')).toBeInTheDocument()
+      })
+
+      // カメラ切り替え
+      fireEvent.click(screen.getByTestId('mock-switch-camera'))
+
+      // このテストは現在失敗する可能性（タイミング問題への対応が未実装）
+      await waitFor(() => {
+        expect(querySelectorSpy).toHaveBeenCalledTimes(2)
+        // 新しいstreamを持つvideo elementが正しく渡されることを確認
+        expect(screen.getByTestId('pose-detector-component')).toBeInTheDocument()
+      }, { timeout: 2000 })
+    })
+
+    it('should handle camera change with null stream gracefully', async () => {
+      const querySelectorSpy = vi.fn((selector: string) => {
+        if (selector === 'video') return null // video elementが見つからない場合
+        return null
+      })
+      
+      Object.defineProperty(document, 'querySelector', {
+        value: querySelectorSpy,
+        writable: true,
+      })
+
+      render(<App />)
+
+      // カメラ開始
+      fireEvent.click(screen.getByTestId('mock-start-camera'))
+      
+      // video elementが見つからなくてもエラーにならないことを確認
+      await waitFor(() => {
+        expect(screen.getByTestId('pose-detector-component')).toBeInTheDocument()
+      })
+
+      // カメラ切り替え
+      fireEvent.click(screen.getByTestId('mock-switch-camera'))
+
+      // このテストは現在失敗する可能性（エラーハンドリングが未実装）
+      await waitFor(() => {
+        expect(querySelectorSpy).toHaveBeenCalled()
+        // nullの場合でもアプリが動作し続けることを確認
+        expect(screen.getByTestId('pose-detector-component')).toBeInTheDocument()
       })
     })
   })

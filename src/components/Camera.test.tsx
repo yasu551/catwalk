@@ -122,7 +122,7 @@ describe('Camera', () => {
       
       // カメラ切り替えボタンの存在を確認
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /switch camera/i })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: /switch to rear camera/i })).toBeInTheDocument()
       })
     })
 
@@ -137,7 +137,7 @@ describe('Camera', () => {
       })
 
       // カメラ切り替えボタンをクリック
-      const switchButton = screen.getByRole('button', { name: /switch camera/i })
+      const switchButton = screen.getByRole('button', { name: /switch to rear camera/i })
       fireEvent.click(switchButton)
 
       // facingModeが変更されることを確認
@@ -180,7 +180,7 @@ describe('Camera', () => {
       mockGetUserMedia.mockResolvedValue(mockStream)
 
       // カメラ切り替え
-      const switchButton = screen.getByRole('button', { name: /switch camera/i })
+      const switchButton = screen.getByRole('button', { name: /switch to rear camera/i })
       fireEvent.click(switchButton)
 
       // 2回目はfacingMode: 'environment'で呼ばれることを確認
@@ -211,13 +211,13 @@ describe('Camera', () => {
       mockGetUserMedia.mockRejectedValueOnce(new Error('Camera switch failed'))
 
       // カメラ切り替え
-      const switchButton = screen.getByRole('button', { name: /switch camera/i })
+      const switchButton = screen.getByRole('button', { name: /switch to rear camera/i })
       fireEvent.click(switchButton)
 
       // エラーメッセージが表示されることを確認
       // このテストは現在失敗する（エラーハンドリングが未実装のため）
       await waitFor(() => {
-        expect(screen.getByRole('alert')).toHaveTextContent('Camera switch failed')
+        expect(screen.getByRole('alert')).toHaveTextContent('Camera switch failed. Reverting to previous camera.')
       })
     })
 
@@ -236,12 +236,113 @@ describe('Camera', () => {
       expect(screen.getByTestId('facing-mode-indicator')).toHaveTextContent('Front Camera')
 
       // カメラ切り替え
-      const switchButton = screen.getByRole('button', { name: /switch camera/i })
+      const switchButton = screen.getByRole('button', { name: /switch to rear camera/i })
       fireEvent.click(switchButton)
 
       // リアカメラ表示に変更
       await waitFor(() => {
         expect(screen.getByTestId('facing-mode-indicator')).toHaveTextContent('Rear Camera')
+      })
+    })
+
+    // Phase 1: カメラ切り替え時のコールバック実行順序テスト (TDD RED)
+    describe('Camera switch callback execution order', () => {
+      it('should execute onStream before onCameraChange during camera switch', async () => {
+        const onStreamMock = vi.fn()
+        const onCameraChangeMock = vi.fn()
+        const callOrder: string[] = []
+
+        // コールバック実行順序を記録
+        onStreamMock.mockImplementation(() => {
+          callOrder.push('onStream')
+        })
+        onCameraChangeMock.mockImplementation(() => {
+          callOrder.push('onCameraChange')
+        })
+
+        mockGetUserMedia.mockResolvedValue(mockStream)
+        render(<Camera onStream={onStreamMock} onCameraChange={onCameraChangeMock} />)
+
+        // カメラ開始
+        fireEvent.click(screen.getByText('Start Camera'))
+        await waitFor(() => {
+          expect(screen.getByText('Stop Camera')).toBeInTheDocument()
+        })
+
+        // コールオーダーをリセット
+        callOrder.splice(0, callOrder.length)
+        mockGetUserMedia.mockClear()
+        mockGetUserMedia.mockResolvedValue(mockStream)
+
+        // カメラ切り替え
+        const switchButton = screen.getByRole('button', { name: /switch to rear camera/i })
+        fireEvent.click(switchButton)
+
+        // このテストは現在失敗する（コールバック順序が保証されていないため）
+        await waitFor(() => {
+          expect(callOrder).toEqual(['onStream', 'onCameraChange'])
+        })
+      })
+
+      it('should ensure video element stream is set before triggering callbacks', async () => {
+        const onStreamMock = vi.fn()
+        let videoElementStreamSet = false
+
+        // video element のストリーム設定を監視
+        onStreamMock.mockImplementation((stream: MediaStream) => {
+          const video = document.querySelector('video') as HTMLVideoElement
+          videoElementStreamSet = video && video.srcObject === stream
+        })
+
+        mockGetUserMedia.mockResolvedValue(mockStream)
+        render(<Camera onStream={onStreamMock} />)
+
+        // カメラ開始
+        fireEvent.click(screen.getByText('Start Camera'))
+        await waitFor(() => {
+          expect(screen.getByText('Stop Camera')).toBeInTheDocument()
+        })
+
+        // カメラ切り替え
+        mockGetUserMedia.mockClear()
+        mockGetUserMedia.mockResolvedValue(mockStream)
+        
+        const switchButton = screen.getByRole('button', { name: /switch to rear camera/i })
+        fireEvent.click(switchButton)
+
+        // このテストは現在失敗する（video element ストリーム設定前にコールバックが実行される可能性）
+        await waitFor(() => {
+          expect(videoElementStreamSet).toBe(true)
+        })
+      })
+
+      it('should handle camera switch synchronization errors gracefully', async () => {
+        const onStreamMock = vi.fn()
+        const onCameraChangeMock = vi.fn()
+
+        mockGetUserMedia.mockResolvedValue(mockStream)
+        render(<Camera onStream={onStreamMock} onCameraChange={onCameraChangeMock} />)
+
+        // カメラ開始
+        fireEvent.click(screen.getByText('Start Camera'))
+        await waitFor(() => {
+          expect(screen.getByText('Stop Camera')).toBeInTheDocument()
+        })
+
+        // カメラ切り替え時にエラーを発生させる
+        mockGetUserMedia.mockRejectedValueOnce(new Error('Camera switch sync error'))
+
+        const switchButton = screen.getByRole('button', { name: /switch to rear camera/i })
+        fireEvent.click(switchButton)
+
+        // このテストは現在失敗する（同期エラーハンドリングが未実装）
+        await waitFor(() => {
+          expect(screen.getByRole('alert')).toHaveTextContent('Camera switch failed. Reverting to previous camera.')
+        })
+
+        // コールバックが適切に処理されることを確認
+        expect(onStreamMock).toHaveBeenCalled()
+        expect(onCameraChangeMock).not.toHaveBeenCalledWith('environment')
       })
     })
   })

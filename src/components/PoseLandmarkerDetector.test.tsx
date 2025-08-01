@@ -176,4 +176,127 @@ describe('PoseLandmarkerDetector', () => {
     // コンポーネントが重心計算システムと統合されていることを確認
     expect(screen.getByText('Initializing pose landmark detection...')).toBeInTheDocument()
   })
+
+  // Phase 3: videoElement変更時の再初期化テスト (TDD RED)
+  describe('Video Element Change Lifecycle', () => {
+    it('should reinitialize when videoElement prop changes', async () => {
+      const mockVideo1 = document.createElement('video')
+      const mockVideo2 = document.createElement('video')
+      
+      Object.defineProperty(mockVideo1, 'videoWidth', { value: 640 })
+      Object.defineProperty(mockVideo1, 'videoHeight', { value: 480 })
+      Object.defineProperty(mockVideo2, 'videoWidth', { value: 1280 })
+      Object.defineProperty(mockVideo2, 'videoHeight', { value: 720 })
+
+      const { rerender } = render(
+        <PoseLandmarkerDetector videoElement={mockVideo1} />
+      )
+
+      expect(screen.getByText('Initializing pose landmark detection...')).toBeInTheDocument()
+
+      // video elementを変更
+      rerender(<PoseLandmarkerDetector videoElement={mockVideo2} />)
+
+      // MediaPipeの初期化を待つ
+      await vi.waitFor(() => {
+        // 再初期化されることを期待（ローディング状態が再表示される可能性）
+        expect(screen.getByText('Initializing pose landmark detection...')).toBeInTheDocument()
+      })
+    })
+
+    it('should clean up animation frame when videoElement changes', async () => {
+      const cancelAnimationFrameSpy = vi.spyOn(globalThis, 'cancelAnimationFrame')
+      
+      // animation frameをトリガーするために十分な条件を設定
+      Object.defineProperty(mockVideoElement, 'videoWidth', { value: 640 })
+      Object.defineProperty(mockVideoElement, 'videoHeight', { value: 480 })
+
+      const { rerender } = render(
+        <PoseLandmarkerDetector videoElement={mockVideoElement} />
+      )
+
+      // MediaPipeの初期化を待つ
+      await new Promise(resolve => setTimeout(resolve, 100))
+
+      const mockVideo2 = document.createElement('video')
+      Object.defineProperty(mockVideo2, 'videoWidth', { value: 1280 })
+      Object.defineProperty(mockVideo2, 'videoHeight', { value: 720 })
+
+      // video elementを変更
+      rerender(<PoseLandmarkerDetector videoElement={mockVideo2} />)
+
+      // フレーム処理のクリーンアップを待つ
+      await new Promise(resolve => setTimeout(resolve, 50))
+
+      // cancelAnimationFrameが呼ばれることを期待
+      expect(cancelAnimationFrameSpy).toHaveBeenCalled()
+    })
+
+    it('should restart pose detection with new video element', async () => {
+      const requestAnimationFrameSpy = vi.spyOn(globalThis, 'requestAnimationFrame')
+      
+      Object.defineProperty(mockVideoElement, 'videoWidth', { value: 640 })
+      Object.defineProperty(mockVideoElement, 'videoHeight', { value: 480 })
+
+      const { rerender } = render(
+        <PoseLandmarkerDetector videoElement={mockVideoElement} />
+      )
+
+      // MediaPipeの初期化を待つ
+      await new Promise(resolve => setTimeout(resolve, 100))
+
+      // モック関数をクリア
+      requestAnimationFrameSpy.mockClear()
+
+      const mockVideo2 = document.createElement('video')
+      Object.defineProperty(mockVideo2, 'videoWidth', { value: 1280 })
+      Object.defineProperty(mockVideo2, 'videoHeight', { value: 720 })
+
+      // video elementを変更
+      rerender(<PoseLandmarkerDetector videoElement={mockVideo2} />)
+
+      // フレーム処理の再開始を待つ
+      await new Promise(resolve => setTimeout(resolve, 50)) 
+
+      // 新しいvideo elementで処理が再開されることを期待
+      expect(requestAnimationFrameSpy).toHaveBeenCalled()
+    })
+
+    it('should handle null to non-null videoElement transition', () => {
+      const { rerender } = render(
+        <PoseLandmarkerDetector videoElement={null} />
+      )
+
+      expect(screen.getByText('Initializing pose landmark detection...')).toBeInTheDocument()
+
+      // null から実際のvideo elementに変更
+      rerender(<PoseLandmarkerDetector videoElement={mockVideoElement} />)
+
+      // 正常に動作することを確認
+      expect(screen.getByText('Initializing pose landmark detection...')).toBeInTheDocument()
+    })
+
+    it('should handle non-null to null videoElement transition', async () => {
+      const cancelAnimationFrameSpy = vi.spyOn(globalThis, 'cancelAnimationFrame')
+
+      Object.defineProperty(mockVideoElement, 'videoWidth', { value: 640 })
+      Object.defineProperty(mockVideoElement, 'videoHeight', { value: 480 })
+
+      const { rerender } = render(
+        <PoseLandmarkerDetector videoElement={mockVideoElement} />
+      )
+
+      // MediaPipeの初期化を待つ
+      await new Promise(resolve => setTimeout(resolve, 100))
+
+      // video element を null に変更
+      rerender(<PoseLandmarkerDetector videoElement={null} />)
+
+      // クリーンアップを待つ
+      await new Promise(resolve => setTimeout(resolve, 50))
+
+      // animation frameがクリーンアップされることを期待
+      expect(cancelAnimationFrameSpy).toHaveBeenCalled()
+    })
+  })
 })
