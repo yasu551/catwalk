@@ -17,7 +17,8 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:report": "playwright show-report",
-    "check-all": "npm run lint && npm run format:check && npm run test -- --run"
+    "check-all": "npm run lint && npm run format:check && npm run test -- --run",
+    "vercel-build": "npm run build"
   },
   "dependencies": {
     "@mediapipe/camera_utils": "^0.3.1675466862",
