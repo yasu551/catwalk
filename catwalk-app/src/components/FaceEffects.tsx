@@ -21,7 +21,6 @@ export function FaceEffects({
 }: FaceEffectsProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const animationFrameRef = useRef<number | null>(null)
-  const startTimeRef = useRef<number>(Date.now())
 
   useEffect(() => {
     const canvas = canvasRef.current

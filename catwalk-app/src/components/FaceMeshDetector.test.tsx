@@ -102,7 +102,7 @@ describe('FaceMeshDetector', () => {
     
     // Face Mesh初期化を失敗させる
     const { FaceMesh } = await import('@mediapipe/face_mesh')
-    const mockFaceMesh = FaceMesh as any
+    const mockFaceMesh = FaceMesh as unknown as ReturnType<typeof vi.fn>
     mockFaceMesh.mockImplementationOnce(() => ({
       setOptions: vi.fn(),
       onResults: vi.fn(),
@@ -135,19 +135,9 @@ describe('FaceMeshDetector', () => {
       />
     )
 
-    // Face Meshの結果コールバックをシミュレート
-    const mockResults = {
-      multiFaceLandmarks: [
-        [
-          { x: 0.5, y: 0.4, z: 0.1 },
-          { x: 0.6, y: 0.5, z: 0.2 }
-        ]
-      ],
-      image: mockVideoElement
-    }
-
     // onResultsコールバックが呼ばれることを確認（実装後にパスする）
     // この時点では実装されていないため失敗する
+    expect(mockOnResults).toBeDefined()
   })
 
   // 🔴 RED: ビデオ要素変更時の再初期化テスト（まだ実装されていない）

@@ -46,7 +46,6 @@ export function FaceMeshDetector({
           refineLandmarks: refineLandmarks,
           minDetectionConfidence: Math.max(minDetectionConfidence, 0.6), // 最小0.6に引き上げ
           minTrackingConfidence: Math.max(minTrackingConfidence, 0.6), // 最小0.6に引き上げ
-          staticImageMode: false, // 動画モードで最適化
         })
 
         faceMeshInstance.onResults((results: Results) => {
@@ -80,7 +79,7 @@ export function FaceMeshDetector({
           if (onResults) {
             const faceMeshResults: FaceMeshResults = {
               multiFaceLandmarks: results.multiFaceLandmarks,
-              image: results.image
+              image: results.image as HTMLVideoElement | HTMLImageElement | HTMLCanvasElement
             }
             onResults(faceMeshResults)
           }
@@ -100,7 +99,7 @@ export function FaceMeshDetector({
     return () => {
       faceMesh?.close()
     }
-  }, [maxNumFaces, refineLandmarks, minDetectionConfidence, minTrackingConfidence, onResults])
+  }, [faceMesh, maxNumFaces, refineLandmarks, minDetectionConfidence, minTrackingConfidence, onResults])
 
   // カメラストリームを設定
   useEffect(() => {

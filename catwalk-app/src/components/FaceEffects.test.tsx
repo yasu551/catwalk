@@ -38,7 +38,7 @@ describe('FaceEffects', () => {
       strokeStyle: '#000000',
       lineWidth: 1,
       font: '16px Arial'
-    } as any
+    } as unknown as CanvasRenderingContext2D
 
     vi.spyOn(mockCanvas, 'getContext').mockReturnValue(mockContext)
     // document.createElementのスパイを設定

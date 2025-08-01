@@ -8,7 +8,7 @@ export function extractFaceRegions(results: FaceMeshResults): FaceRegion[] {
     return []
   }
 
-  return results.multiFaceLandmarks.map((landmarks, index) => {
+  return results.multiFaceLandmarks.map((landmarks) => {
     // 顔の境界ボックスを計算
     const bounds = calculateFaceBounds(landmarks)
     

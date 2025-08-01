@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState, memo } from 'react'
 import { type GaitAnalysis } from '../types/gait'
 import { globalTrajectoryTracker } from '../utils/trajectoryTracker'
 
@@ -8,7 +8,7 @@ interface TrajectoryVisualizationProps {
   className?: string
 }
 
-export const TrajectoryVisualization: React.FC<TrajectoryVisualizationProps> = ({
+export const TrajectoryVisualization: React.FC<TrajectoryVisualizationProps> = memo(({
   width = 400,
   height = 300,
   className = ''
@@ -210,6 +210,8 @@ export const TrajectoryVisualization: React.FC<TrajectoryVisualizationProps> = (
       </div>
     </div>
   )
-}
+})
+
+TrajectoryVisualization.displayName = 'TrajectoryVisualization'
 
 export default TrajectoryVisualization

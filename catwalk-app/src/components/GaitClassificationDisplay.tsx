@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { memo } from 'react'
 import { type GaitClassification } from '../types/gait'
 
 interface GaitClassificationDisplayProps {
@@ -8,7 +8,7 @@ interface GaitClassificationDisplayProps {
   className?: string
 }
 
-export const GaitClassificationDisplay: React.FC<GaitClassificationDisplayProps> = ({
+export const GaitClassificationDisplay: React.FC<GaitClassificationDisplayProps> = memo(({
   classification,
   showAnimation = false,
   showDetails = false,
@@ -159,6 +159,8 @@ export const GaitClassificationDisplay: React.FC<GaitClassificationDisplayProps>
       </div>
     </div>
   )
-}
+})
+
+GaitClassificationDisplay.displayName = 'GaitClassificationDisplay'
 
 export default GaitClassificationDisplay

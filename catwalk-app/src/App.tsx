@@ -3,6 +3,7 @@ import { Camera } from './components/Camera'
 import { PoseDetector } from './components/PoseDetector'
 import { TrajectoryVisualization } from './components/TrajectoryVisualization'
 import { GaitClassificationDisplay } from './components/GaitClassificationDisplay'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { globalTrajectoryTracker } from './utils/trajectoryTracker'
 import { classifyGaitPattern } from './utils/gaitAnalysis'
 import { type GaitClassification } from './types/gait'
@@ -50,36 +51,37 @@ function App() {
   }, [stream])
 
   return (
-    <div className="app">
-      <header className="app-header">
-        <h1>歩行分析アプリ - Catwalk</h1>
-        <p>カメラで歩行を撮影し、キャットウォークか酔歩かを判定します</p>
-      </header>
+    <ErrorBoundary>
+      <div className="app">
+        <header className="app-header">
+          <h1>歩行分析アプリ - Catwalk</h1>
+          <p>カメラで歩行を撮影し、キャットウォークか酔歩かを判定します</p>
+        </header>
 
-      <main className="app-main">
-        <div className="camera-section">
-          <h2>カメラ映像</h2>
+        <main className="app-main" role="main">
+        <section className="camera-section" aria-labelledby="camera-heading">
+          <h2 id="camera-heading">カメラ映像</h2>
           <Camera onStream={handleStream} />
-        </div>
+        </section>
 
         {stream && videoElement && (
           <>
-            <div className="pose-section">
-              <h2>姿勢検出</h2>
+            <section className="pose-section" aria-labelledby="pose-heading">
+              <h2 id="pose-heading">姿勢検出</h2>
               <PoseDetector videoElement={videoElement} />
-            </div>
+            </section>
 
-            <div className="trajectory-section">
-              <h2>歩行軌跡分析</h2>
+            <section className="trajectory-section" aria-labelledby="trajectory-heading">
+              <h2 id="trajectory-heading">歩行軌跡分析</h2>
               <TrajectoryVisualization 
                 width={600} 
                 height={400} 
                 className="trajectory-visualization-main"
               />
-            </div>
+            </section>
 
-            <div className="classification-section">
-              <h2>歩行パターン判定</h2>
+            <section className="classification-section" aria-labelledby="classification-heading">
+              <h2 id="classification-heading">歩行パターン判定</h2>
               {gaitClassification ? (
                 <GaitClassificationDisplay 
                   classification={gaitClassification}
@@ -88,18 +90,19 @@ function App() {
                   className="gait-classification-main"
                 />
               ) : (
-                <div className="classification-loading">
+                <div className="classification-loading" role="status" aria-live="polite">
                   <p>歩行データを収集中...</p>
-                  <div className="loading-indicator">
+                  <div className="loading-indicator" aria-hidden="true">
                     <div className="spinner"></div>
                   </div>
                 </div>
               )}
-            </div>
+            </section>
           </>
         )}
-      </main>
-    </div>
+        </main>
+      </div>
+    </ErrorBoundary>
   )
 }
 
